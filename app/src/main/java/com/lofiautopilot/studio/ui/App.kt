@@ -111,7 +111,7 @@ fun App(g: Graph, jobFromIntent: androidx.compose.runtime.MutableLongState, shar
     val notifPerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= 33) notifPerm.launch(Manifest.permission.POST_NOTIFICATIONS)
-        g.engine.library.let { lib -> if (g.settings.value.musicFolderUris.isNotEmpty()) runCatching { lib.scanMusic() } }
+        g.engine.library.let { lib -> if (g.settings.value.musicFolderUris.isNotEmpty()) runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { lib.scanMusic() } } }
     }
     LaunchedEffect(jobFromIntent.longValue) {
         if (jobFromIntent.longValue > 0) { overlay = Overlay.Job(jobFromIntent.longValue); jobFromIntent.longValue = 0 }

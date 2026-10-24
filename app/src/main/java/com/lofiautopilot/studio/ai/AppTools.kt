@@ -207,7 +207,7 @@ class AppTools(private val g: Graph) {
             m.clearEffects(); "Cleared."
         },
         ToolDef("scan_folders", "Rescan the music and picture folders now.", schema()) {
-            val m = g.engine.library.scanMusic(); val i = g.engine.library.scanImages()
+            val (m, i) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { g.engine.library.scanMusic() to g.engine.library.scanImages() }
             "Music: $m new track(s). Pictures: ${i.size} new."
         },
         ToolDef("list_pictures", "Show recent pictures found in the watched folder and whether they are new or used.", schema()) {

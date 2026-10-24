@@ -9,6 +9,7 @@ class LofiApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        com.lofiautopilot.studio.core.CrashReport.install(this)
         graph.notifier.createChannels()
         com.lofiautopilot.studio.auto.KeepAliveWorker.schedule(this)
         kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) { graph.db.jobs().requeueRunning() }

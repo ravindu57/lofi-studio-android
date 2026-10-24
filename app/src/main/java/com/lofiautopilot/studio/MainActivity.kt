@@ -5,6 +5,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.lofiautopilot.studio.core.Graph
 import com.lofiautopilot.studio.ui.App
@@ -20,9 +23,21 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge(statusBarStyle = androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT), navigationBarStyle = androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT))
         handle(intent)
         val g = Graph.get(this)
+        val crash = com.lofiautopilot.studio.core.CrashReport.pending(this)
         setContent {
             LofiTheme(dark = true) {
+                var report by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(crash) }
                 App(g, jobFromIntent, sharedImage)
+                report?.let { r ->
+                    val clip = androidx.compose.ui.platform.LocalClipboardManager.current
+                    androidx.compose.material3.AlertDialog(
+                        onDismissRequest = { report = null },
+                        title = { androidx.compose.material3.Text("The app crashed last time") },
+                        text = { androidx.compose.material3.Text(r.take(1500), fontSize = androidx.compose.ui.unit.TextUnit(10f, androidx.compose.ui.unit.TextUnitType.Sp), modifier = androidx.compose.ui.Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) },
+                        confirmButton = { androidx.compose.material3.TextButton({ clip.setText(androidx.compose.ui.text.AnnotatedString(r)); report = null }) { androidx.compose.material3.Text("Copy and close") } },
+                        dismissButton = { androidx.compose.material3.TextButton({ report = null }) { androidx.compose.material3.Text("Close") } },
+                    )
+                }
             }
         }
     }

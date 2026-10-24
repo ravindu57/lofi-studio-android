@@ -230,7 +230,7 @@ class EditorModel(val g: Graph, initialProject: Project) {
 
     /** Adds a picture or video at the playhead. */
     fun addMedia(uri: String, video: Boolean, advance: Boolean = false): String {
-        val d = if (video) PcmDecoder.probe(ctx, Uri.parse(uri)) / 1e6f else 0f
+        val d = if (video) runCatching { PcmDecoder.probe(ctx, Uri.parse(uri)) / 1e6f }.getOrDefault(0f) else 0f
         val len = if (video && d > 0.5f) d else 6f
         val clip = MediaClip(uri = uri, video = video, srcDurS = d, lenS = len, transition = if (project.media.isEmpty()) "none" else "fade")
         val id = insertMedia(clip)
@@ -255,7 +255,7 @@ class EditorModel(val g: Graph, initialProject: Project) {
     }
 
     fun replaceMedia(id: String, uri: String, video: Boolean) {
-        val d = if (video) PcmDecoder.probe(ctx, Uri.parse(uri)) / 1e6f else 0f
+        val d = if (video) runCatching { PcmDecoder.probe(ctx, Uri.parse(uri)) / 1e6f }.getOrDefault(0f) else 0f
         updateMedia(id) { it.copy(uri = uri, video = video, srcDurS = d, inS = 0f) }
     }
 

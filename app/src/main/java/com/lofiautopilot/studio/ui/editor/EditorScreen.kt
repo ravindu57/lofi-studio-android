@@ -150,10 +150,10 @@ fun EditorScreen(g: Graph, model: EditorModel, onClose: () -> Unit) {
 
     // several pictures or videos at once: they go in one after another from the playhead
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { us: List<Uri> ->
-        scope.launch(Dispatchers.IO) { us.forEach { Saf.persist(ctx, it); model.addMedia(it.toString(), false, advance = us.size > 1) } }
+        scope.launch(Dispatchers.IO) { us.forEach { runCatching { Saf.persist(ctx, it); model.addMedia(it.toString(), false, advance = us.size > 1) } } }
     }
     val pickVideo = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { us: List<Uri> ->
-        scope.launch(Dispatchers.IO) { us.forEach { Saf.persist(ctx, it); model.addMedia(it.toString(), true, advance = us.size > 1) } }
+        scope.launch(Dispatchers.IO) { us.forEach { runCatching { Saf.persist(ctx, it); model.addMedia(it.toString(), true, advance = us.size > 1) } } }
     }
     val pickAudio = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { us: List<Uri> ->
         scope.launch {

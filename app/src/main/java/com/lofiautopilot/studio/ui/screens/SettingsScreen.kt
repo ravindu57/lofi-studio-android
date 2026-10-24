@@ -88,7 +88,7 @@ fun SettingsScreen(g: Graph, onClose: () -> Unit) {
         AccountsCard(g)
         NotifyCard(g)
         BackgroundCard()
-        Text("AIM3 1.1 · everything runs on this phone. Keys are stored encrypted in the Android Keystore.", color = c.faint, fontSize = 12.sp)
+        Text("SE (Synthetic Editor) · everything runs on this phone. Keys are stored encrypted in the Android Keystore.", color = c.faint, fontSize = 12.sp)
     }
 }
 
@@ -323,13 +323,13 @@ private fun BackgroundCard() {
     val ok = remember { (ctx.getSystemService(Context.POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(ctx.packageName) }
     Card("Keep running in the background", 6) {
         Text(
-            if (ok) "✓ Battery optimisation is off for AIM3." else "Phones stop background apps to save battery. Allow AIM3 so Autopilot can render overnight.",
+            if (ok) "✓ Battery optimisation is off for SE." else "Phones stop background apps to save battery. Allow SE so Autopilot can render overnight.",
             color = if (ok) c.ok else c.muted, fontSize = 14.sp,
         )
         if (!ok) GradientButton("Allow background activity", small = true) {
             ctx.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${ctx.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
-        Text("Oppo / ColorOS: also open Settings → Battery → AIM3 and allow “Background activity” and “Auto launch”, and lock the app in the Recents screen (pull the card down or tap the lock).", color = c.faint, fontSize = 12.sp)
+        Text("Oppo / ColorOS: also open Settings → Battery → SE and allow “Background activity” and “Auto launch”, and lock the app in the Recents screen (pull the card down or tap the lock).", color = c.faint, fontSize = 12.sp)
         GhostButton("Open app settings") { ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${ctx.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }
 }
@@ -364,5 +364,5 @@ private fun CloudAiBlock(g: Graph) {
         }
     }
     if (result.isNotBlank()) Text(result, color = if (result.contains("works")) c.ok else c.crit, fontSize = 12.sp)
-    Text("Free tiers: the provider may use what you send to improve its models. AIM3 sends only short text (your chat, settings, music statistics), never your audio or pictures.", color = c.faint, fontSize = 11.sp)
+    Text("Free tiers: the provider may use what you send to improve its models. SE sends only short text (your chat, settings, music statistics), never your audio or pictures.", color = c.faint, fontSize = 11.sp)
 }

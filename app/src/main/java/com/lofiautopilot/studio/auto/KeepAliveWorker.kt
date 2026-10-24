@@ -15,7 +15,7 @@ class KeepAliveWorker(ctx: Context, p: WorkerParameters) : CoroutineWorker(ctx, 
         val g = Graph.get(applicationContext)
         if (g.settings.value.autopilot && !RenderService.running) {
             val ok = RenderService.start(applicationContext)
-            if (!ok) g.notifier.needsAttention("Autopilot was stopped by the phone", "Tap to resume. Allow background activity for AIM3 in battery settings to keep it running.")
+            if (!ok) g.notifier.needsAttention("Autopilot was stopped by the phone", "Tap to resume. Allow background activity for SE in battery settings to keep it running.")
         }
         return Result.success()
     }

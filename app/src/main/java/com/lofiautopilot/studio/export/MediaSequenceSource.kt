@@ -21,7 +21,7 @@ object TitleBitmap {
             color = Color.WHITE; typeface = Typeface.create("sans-serif-light", Typeface.BOLD); textAlign = Paint.Align.CENTER
             letterSpacing = 0.12f
         }
-        val t = text.ifBlank { "AIM3" }.take(40).uppercase()
+        val t = text.ifBlank { "SE" }.take(40).uppercase()
         var size = 120f
         p.textSize = size
         while (p.measureText(t) > 940f && size > 28f) { size -= 4f; p.textSize = size }

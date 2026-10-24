@@ -50,7 +50,7 @@ class RenderService : Service() {
             ACTION_CANCEL -> scope.launch { val id = g.engine.currentJobId; if (id > 0) g.engine.setStatus(id, "cancel") }
             ACTION_STOP -> { stopSelf(); return START_NOT_STICKY }
         }
-        val n = g.notifier.serviceNotification("AIM3", idleText())
+        val n = g.notifier.serviceNotification("SE", idleText())
         try {
             if (Build.VERSION.SDK_INT >= 29) startForeground(Notifier.ID_SERVICE, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
             else startForeground(Notifier.ID_SERVICE, n)
@@ -97,7 +97,7 @@ class RenderService : Service() {
                     if (!s.autopilot && !pending) { stopSelf(); return }
                     val next = g.db.jobs().runnable().filter { it.publishAt > System.currentTimeMillis() }.minByOrNull { it.publishAt }
                     val text = if (next != null) "Next: “${next.title.ifBlank { "video" }}” at ${SimpleDateFormat("EEE HH:mm", Locale.getDefault()).format(Date(next.publishAt))}" else idleText()
-                    g.notifier.updateService(g.notifier.serviceNotification("AIM3 · Autopilot", text))
+                    g.notifier.updateService(g.notifier.serviceNotification("SE · Autopilot", text))
                     runCatching { engine.cleanup() }
                     delay(30_000)
                 }

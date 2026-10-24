@@ -76,7 +76,7 @@ object InsightsRepo {
 
         val tips = ArrayList<Tip>()
         if (failedWeek > 0) tips.add(Tip("$failedWeek video${if (failedWeek > 1) "s" else ""} failed this week. Open Videos → Problems, or ask the assistant to fix it.", 2, "videos"))
-        if (s.autopilot && week < s.videosPerDay * 7 / 2 && jobs.isNotEmpty()) tips.add(Tip("Only $week of ${s.videosPerDay * 7} planned videos were made this week. Check that the phone isn't stopping AIM3 in the background.", 1, "settings"))
+        if (s.autopilot && week < s.videosPerDay * 7 / 2 && jobs.isNotEmpty()) tips.add(Tip("Only $week of ${s.videosPerDay * 7} planned videos were made this week. Check that the phone isn't stopping SE in the background.", 1, "settings"))
         if (tracks.size in 1..9) tips.add(Tip("Your library has only ${tracks.size} tracks. Add more so mixes don't repeat.", 1, "library"))
         if (tracks.isEmpty()) tips.add(Tip("Add a music folder so videos can be made.", 2, "library"))
         if (free in 1..3000) tips.add(Tip("Only ${"%.1f".format(free / 1024.0)} GB free. Rendering needs space; clean up old videos.", 2, "cleanup"))

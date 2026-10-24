@@ -57,7 +57,8 @@ class LocalLlm(private val ctx: Context, private val g: Graph) {
 
     fun modelDir() = File(ctx.filesDir, "models").apply { mkdirs() }
     fun fileFor(m: ModelInfo) = File(modelDir(), m.url.substringAfterLast('/'))
-    fun installed(m: ModelInfo) = fileFor(m).let { it.exists() && it.length() > m.sizeMb * 1_000_000L * 0.9 }
+    /** A finished download only ever lives at the final path (partial ones are .part files), so size is just a sanity check. */
+    fun installed(m: ModelInfo) = fileFor(m).let { it.exists() && it.length() > m.sizeMb * 1_000_000L * 0.5 }
 
     fun activeModel(): ModelInfo? {
         val s = g.settings.value
@@ -96,6 +97,7 @@ class LocalLlm(private val ctx: Context, private val g: Graph) {
         val part = File(f.path + ".part")
         try {
             var have = if (part.exists()) part.length() else 0L
+            var expect = -1L
             val b = Request.Builder().url(m.url)
             if (m.needsToken) {
                 val t = g.secrets.get(SecretStore.HF_TOKEN)
@@ -109,6 +111,7 @@ class LocalLlm(private val ctx: Context, private val g: Graph) {
                 if (r.code == 200 && have > 0) { part.delete(); have = 0 }
                 val body = r.body ?: return@withContext false
                 val total = body.contentLength() + have
+                expect = if (body.contentLength() > 0) total else -1L
                 RandomAccessFile(part, "rw").use { raf ->
                     raf.seek(have)
                     val buf = ByteArray(256 * 1024)
@@ -125,8 +128,12 @@ class LocalLlm(private val ctx: Context, private val g: Graph) {
                     }
                 }
             }
+            if (expect > 0 && part.length() < expect) {
+                _dl.value = Download(m.id, part.length(), expect, "Download stopped early (${part.length() / 1_000_000} of ${expect / 1_000_000} MB). Tap again to resume.")
+                return@withContext false
+            }
             f.delete()
-            part.renameTo(f)
+            if (!part.renameTo(f)) { part.copyTo(f, overwrite = true); part.delete() }
             _dl.value = Download(m.id, f.length(), f.length(), finished = true)
             g.settings.update { it.copy(localModelId = m.id, localModelPath = f.absolutePath, planner = if (it.planner == "rules") "local" else it.planner) }
             true

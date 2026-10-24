@@ -43,7 +43,7 @@ fun OnboardingScreen(g: Graph, onDone: (goLibrary: Boolean) -> Unit) {
     val c = Lofi.c
     var step by remember { mutableIntStateOf(0) }
     val pages = listOf(
-        Triple("", "Your lofi channel,\non autopilot", "AIM3 picks your music and your newest picture, adds beautiful effects that move with the beat, renders the video right on this phone and can publish it for you."),
+        Triple("", "Your lofi channel,\non autopilot", "SE picks your music and your newest picture, adds beautiful effects that move with the beat, renders the video right on this phone and can publish it for you."),
         Triple("", "A real video editor,\nin your pocket", "Build a timeline in landscape: add songs, place 80+ effects exactly where you want them, drag, trim and snap to the beat, or let AI arrange everything."),
         Triple("", "Smart helpers,\nall optional", "A small AI model on your phone listens to the rhythm and directs the visuals. Add a free AI key and you can fix or change anything just by chatting."),
     )

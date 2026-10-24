@@ -10,7 +10,7 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val g = Graph.get(context)
         if (g.settings.value.autopilot) {
-            g.notifier.needsAttention("Autopilot is paused", "The phone restarted. Tap to open AIM3 and resume.")
+            g.notifier.needsAttention("Autopilot is paused", "The phone restarted. Tap to open SE and resume.")
         }
     }
 }

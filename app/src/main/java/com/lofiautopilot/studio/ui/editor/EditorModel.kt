@@ -241,7 +241,7 @@ class EditorModel(val g: Graph, initialProject: Project) {
     /** Puts a built-in intro at the very start. It takes over the first seconds, so the video does not get longer. */
     fun addIntro(id: String) {
         val def = Intros.byId[id] ?: return
-        val clip = MediaClip(uri = def.uri, lenS = def.lenS, title = project.name.takeIf { it != "Untitled" } ?: "AIM3")
+        val clip = MediaClip(uri = def.uri, lenS = def.lenS, title = project.name.takeIf { it != "Untitled" } ?: "SE")
         edit { p ->
             val rest = p.media.filter { !it.isIntro }.toMutableList()
             if (rest.isNotEmpty()) {

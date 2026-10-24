@@ -161,7 +161,7 @@ private fun PicturesPage(g: Graph) {
             GlassCard(Modifier.fillMaxWidth().staggerIn(0)) {
                 Column(Modifier.padding(16.dp).animateContentSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Watched picture folder", color = c.ink, fontWeight = FontWeight.Bold)
-                    Text("Save new pictures into this folder. AIM3 notices them (even in the background while Autopilot is on) and uses the newest one next.", color = c.muted, fontSize = 13.sp)
+                    Text("Save new pictures into this folder. SE notices them (even in the background while Autopilot is on) and uses the newest one next.", color = c.muted, fontSize = 13.sp)
                     if (s.imageFolderUri.isNotBlank()) Text(Saf.folderName(Uri.parse(s.imageFolderUri)), color = c.ink)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         GradientButton(if (s.imageFolderUri.isBlank()) "Choose folder" else "Change folder", small = true) { pick.launch(null) }

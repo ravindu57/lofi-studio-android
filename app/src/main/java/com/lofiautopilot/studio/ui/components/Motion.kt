@@ -66,31 +66,25 @@ fun AuroraBackground(modifier: Modifier = Modifier, intensity: Float = 1f) {
     Box(modifier.fillMaxSize().background(Lofi.c.bg))
 }
 
-/** The AIM3 mark: a target ring with four reticle ticks, three equaliser bars that dance while active, and one accent dot. */
+/** The SE mark: a squared S and E drawn as strokes. The middle arm of the E is the accent and breathes while active. */
 @Composable
 fun AudioBarsLogo(modifier: Modifier = Modifier, size: Dp = 28.dp, active: Boolean = true) {
     val c = Lofi.c
     val t = rememberInfiniteTransition(label = "logo")
-    val h1 by t.animateFloat(0.35f, 0.8f, infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "h1")
-    val h2 by t.animateFloat(0.55f, 1f, infiniteRepeatable(tween(700, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "h2")
-    val h3 by t.animateFloat(0.3f, 0.7f, infiniteRepeatable(tween(1100, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "h3")
+    val arm by t.animateFloat(0.55f, 1f, infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "arm")
     Canvas(modifier.size(size)) {
-        val s = this.size.minDimension
-        val ctr = Offset(s / 2, s / 2)
-        val sw = s * 0.045f
-        val r = s * 0.30f
-        drawCircle(c.ink, r, ctr, style = Stroke(sw))
-        for (a in listOf(0f to -1f, 0f to 1f, -1f to 0f, 1f to 0f)) {
-            drawLine(c.ink, Offset(ctr.x + a.first * (r + sw * 1.6f), ctr.y + a.second * (r + sw * 1.6f)),
-                Offset(ctr.x + a.first * (r + sw * 3.6f), ctr.y + a.second * (r + sw * 3.6f)), sw, StrokeCap.Round)
+        val k = this.size.minDimension / 108f
+        val sw = Stroke(5f * k, cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round)
+        fun p(vararg xy: Float) = androidx.compose.ui.graphics.Path().apply {
+            moveTo(xy[0] * k, xy[1] * k); for (i in 2 until xy.size step 2) lineTo(xy[i] * k, xy[i + 1] * k)
         }
-        val bw = s * 0.07f
-        val hs = if (active) listOf(h1, h2, h3) else listOf(0.5f, 0.85f, 0.6f)
-        listOf(-1.7f, 0f, 1.7f).forEachIndexed { i, dx ->
-            val bh = s * 0.3f * hs[i]
-            drawRoundRect(c.ink, Offset(ctr.x + dx * bw - bw / 2, ctr.y - bh / 2), Size(bw, bh), CornerRadius(bw / 2))
-        }
-        drawCircle(Color(0xFF52A8FF), s * 0.032f, Offset(ctr.x + r * 0.72f, ctr.y - r * 0.72f))
+        drawPath(androidx.compose.ui.graphics.Path().apply {
+            moveTo(47f * k, 42f * k); cubicTo(47f * k, 36.5f * k, 33f * k, 36.5f * k, 33f * k, 45.5f * k)
+            cubicTo(33f * k, 54f * k, 47f * k, 52f * k, 47f * k, 62.5f * k); cubicTo(47f * k, 71.5f * k, 33f * k, 71.5f * k, 33f * k, 66f * k)
+        }, c.ink, style = sw)
+        drawPath(p(74f, 38f, 60f, 38f, 60f, 70f, 74f, 70f), c.ink, style = sw)
+        val len = 11f * (if (active) arm else 1f)
+        drawLine(Color(0xFF52A8FF), Offset(60f * k, 54f * k), Offset((60f + len) * k, 54f * k), 5f * k, StrokeCap.Round)
     }
 }
 
@@ -199,7 +193,7 @@ fun ProgressRing(progress: Float, modifier: Modifier = Modifier, stroke: Dp = 3.
 
 /**
  * The Autopilot hero animation. Off: a dim static target. On: radar ripples spread outward and small satellites orbit the
- * AIM3 mark. Working: the satellites speed up with comet trails and a progress ring fills around the mark.
+ * SE mark. Working: the satellites speed up with comet trails and a progress ring fills around the mark.
  */
 @Composable
 fun AutopilotOrb(on: Boolean, busy: Boolean, modifier: Modifier = Modifier, progress: Float = 0f, onClick: () -> Unit) {
@@ -241,16 +235,21 @@ fun AutopilotOrb(on: Boolean, busy: Boolean, modifier: Modifier = Modifier, prog
                 drawArc(c.ink.copy(alpha = 0.18f), 0f, 360f, false, Offset(ctr.x - r * 0.96f, ctr.y - r * 0.96f), Size(r * 1.92f, r * 1.92f), style = Stroke(3.dp.toPx()))
                 drawArc(c.ink, -90f, 360f * prog, false, Offset(ctr.x - r * 0.96f, ctr.y - r * 0.96f), Size(r * 1.92f, r * 1.92f), style = Stroke(3.dp.toPx(), cap = StrokeCap.Round))
             }
-            // the AIM3 mark in the middle
-            val mr = r * 0.30f
-            drawCircle(c.ink.copy(alpha = level), mr, ctr, style = Stroke(r * 0.035f))
-            val bw = r * 0.06f
-            val hs = if (on) listOf(0.35f + 0.5f * bars, 0.9f - 0.4f * bars, 0.45f + 0.35f * (1f - bars)) else listOf(0.5f, 0.85f, 0.6f)
-            listOf(-1.7f, 0f, 1.7f).forEachIndexed { i, dx ->
-                val bh = mr * 1.3f * hs[i]
-                drawRoundRect(c.ink.copy(alpha = level), Offset(ctr.x + dx * bw - bw / 2, ctr.y - bh / 2), Size(bw, bh), CornerRadius(bw / 2))
+            // the SE mark in the middle
+            val k = r * 0.019f
+            val sw = Stroke(5f * k, cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round)
+            fun p(vararg xy: Float) = androidx.compose.ui.graphics.Path().apply {
+                moveTo(ctr.x + (xy[0] - 54f) * k, ctr.y + (xy[1] - 54f) * k); for (i in 2 until xy.size step 2) lineTo(ctr.x + (xy[i] - 54f) * k, ctr.y + (xy[i + 1] - 54f) * k)
             }
-            drawCircle(c.sky.copy(alpha = level), r * 0.028f, Offset(ctr.x + mr * 0.72f, ctr.y - mr * 0.72f))
+            fun q(x: Float) = ctr.x + (x - 54f) * k
+            fun w(y: Float) = ctr.y + (y - 54f) * k
+            drawPath(androidx.compose.ui.graphics.Path().apply {
+                moveTo(q(47f), w(42f)); cubicTo(q(47f), w(36.5f), q(33f), w(36.5f), q(33f), w(45.5f))
+                cubicTo(q(33f), w(54f), q(47f), w(52f), q(47f), w(62.5f)); cubicTo(q(47f), w(71.5f), q(33f), w(71.5f), q(33f), w(66f))
+            }, c.ink.copy(alpha = level), style = sw)
+            drawPath(p(74f, 38f, 60f, 38f, 60f, 70f, 74f, 70f), c.ink.copy(alpha = level), style = sw)
+            val len = 11f * (if (on) 0.55f + 0.45f * bars else 1f)
+            drawLine(c.sky.copy(alpha = level), Offset(ctr.x + 6f * k, ctr.y), Offset(ctr.x + (6f + len) * k, ctr.y), 5f * k, StrokeCap.Round)
         }
     }
 }

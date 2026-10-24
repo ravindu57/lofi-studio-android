@@ -117,7 +117,7 @@ fun HomeScreen(g: Graph, goTab: (Tab) -> Unit, openJob: (Long) -> Unit, openSett
                 Row(Modifier.fillMaxWidth().staggerIn(0), verticalAlignment = Alignment.CenterVertically) {
                     AudioBarsLogo(size = 40.dp, active = running != null || s.autopilot)
                     Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                        Text("AIM3", color = c.ink, fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.6).sp)
+                        Text("SE", color = c.ink, fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.6).sp)
                         Text(s.channelName, color = c.muted, fontSize = 13.sp)
                     }
                     Box(Modifier.size(42.dp).clip(CircleShape).background(c.surface).pressScale(openDashboard), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Insights, "Dashboard", tint = c.ink) }

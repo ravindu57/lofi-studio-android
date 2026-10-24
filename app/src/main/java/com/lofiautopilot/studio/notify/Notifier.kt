@@ -111,8 +111,8 @@ class Notifier(private val ctx: Context, private val graph: Graph) {
     }
 
     fun test() {
-        push(ID_ATTENTION, "Notifications work", "You'll hear from AIM3 here when a video is ready.", true, 0, CH_RESULT)
-        remote("AIM3 test notification. If you can read this, remote notifications work.")
+        push(ID_ATTENTION, "Notifications work", "You'll hear from SE here when a video is ready.", true, 0, CH_RESULT)
+        remote("SE test notification. If you can read this, remote notifications work.")
     }
 
     private fun push(id: Int, title: String, text: String, enabled: Boolean, jobId: Long, channel: String) {

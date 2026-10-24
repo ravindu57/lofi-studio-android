@@ -235,7 +235,7 @@ class CloudAi(private val g: Graph) {
         }
         val url = if (p == Provider.GROQ) "https://api.groq.com/openai/v1/chat/completions" else "https://openrouter.ai/api/v1/chat/completions"
         val headers = mutableMapOf("Authorization" to "Bearer ${key(p)}")
-        if (p == Provider.OPENROUTER) { headers["HTTP-Referer"] = "https://github.com/aim3-app"; headers["X-Title"] = "AIM3" }
+        if (p == Provider.OPENROUTER) { headers["HTTP-Referer"] = "https://github.com/aim3-app"; headers["X-Title"] = "SE" }
         val r = post(url, headers, body, p.label)
         val msg = r.optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message") ?: throw AiException("${p.label} returned no answer.")
         val calls = ArrayList<ToolCall>()

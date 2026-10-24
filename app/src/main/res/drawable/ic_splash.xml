@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- AIM3: an aiming ring with four reticle ticks, three equaliser bars (the "3") and one accent dot -->
+<!-- SE (Synthetic Editor): a squared "S" and "E" drawn as single strokes; the middle arm of the E is the accent -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <path android:strokeColor="#FFFFFF" android:strokeWidth="4.2" android:strokeLineCap="round" android:fillColor="#00000000"
-        android:pathData="M54,31 A23,23 0 1,0 54.01,31" />
-    <path android:strokeColor="#FFFFFF" android:strokeWidth="4.2" android:strokeLineCap="round"
-        android:pathData="M54,22 L54,27 M54,81 L54,86 M22,54 L27,54 M81,54 L86,54" />
-    <path android:fillColor="#FFFFFF" android:pathData="M40.5,48.5 L45.5,48.5 Q46.5,48.5 46.5,49.5 L46.5,59 Q46.5,60 45.5,60 L40.5,60 Q39.5,60 39.5,59 L39.5,49.5 Q39.5,48.5 40.5,48.5Z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M51.5,41 L56.5,41 Q57.5,41 57.5,42 L57.5,66 Q57.5,67 56.5,67 L51.5,67 Q50.5,67 50.5,66 L50.5,42 Q50.5,41 51.5,41Z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M62.5,45 L67.5,45 Q68.5,45 68.5,46 L68.5,62 Q68.5,63 67.5,63 L62.5,63 Q61.5,63 61.5,62 L61.5,46 Q61.5,45 62.5,45Z" />
-    <path android:fillColor="#52A8FF" android:pathData="M74,32 m-3.4,0 a3.4,3.4 0 1,0 6.8,0 a3.4,3.4 0 1,0 -6.8,0" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="5" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+        android:pathData="M47,42 C47,36.5 33,36.5 33,45.5 C33,54 47,52 47,62.5 C47,71.5 33,71.5 33,66" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="5" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+        android:pathData="M74,38 H60 V70 H74" />
+    <path android:strokeColor="#52A8FF" android:strokeWidth="5" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M60,54 H71" />
 </vector>

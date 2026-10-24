@@ -88,7 +88,7 @@ fun SettingsScreen(g: Graph, onClose: () -> Unit) {
         AccountsCard(g)
         NotifyCard(g)
         BackgroundCard()
-        Text("SE (Synthetic Editor) · everything runs on this phone. Keys are stored encrypted in the Android Keystore.", color = c.faint, fontSize = 12.sp)
+        Text("Synth Edit (SE) · everything runs on this phone. Keys are stored encrypted in the Android Keystore.", color = c.faint, fontSize = 12.sp)
     }
 }
 

@@ -219,12 +219,18 @@ fun EditorScreen(g: Graph, model: EditorModel, onClose: () -> Unit) {
             if (!fullPreview) TimelineView(model, expandedTimeline, Modifier.fillMaxWidth().height(if (expandedTimeline) 196.dp else 150.dp), onTransition = { sheet = SheetKind.TRANSITION })
             // ---------- contextual toolbar ----------
             if (!fullPreview) Box(Modifier.fillMaxWidth().height(54.dp).background(c.bg).border(1.dp, c.line)) {
-                val sel = model.selection
+                val liveSel = model.selection
+                // The outgoing toolbar is still composed while it fades out, after the selection is already gone (e.g. after Delete). Keep its last selection per mode.
+                val held = remember { arrayOfNulls<Sel>(4) }
+                when (liveSel) { is Sel.Audio -> held[1] = liveSel; is Sel.Effect -> held[2] = liveSel; is Sel.Media -> held[3] = liveSel; null -> {} }
+                val sel = liveSel
                 AnimatedContent(
                     targetState = when (sel) { is Sel.Audio -> 1; is Sel.Effect -> 2; is Sel.Media -> 3; null -> 0 },
                     transitionSpec = { (fadeIn(tween(180)) + slideInVertically(tween(220)) { it / 2 }) togetherWith (fadeOut(tween(100)) + slideOutVertically(tween(160)) { -it / 3 }) },
                     label = "toolbar",
                 ) { mode ->
+                    @Suppress("NAME_SHADOWING")
+                    val sel: Sel? = if (mode == 0) null else (held[mode] ?: return@AnimatedContent)
                     LazyRow(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
                         when (mode) {
                             0 -> {

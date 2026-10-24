@@ -148,6 +148,16 @@ class EditorModel(val g: Graph, initialProject: Project) {
         if (drag) drag(fn) else edit(fn)
     }
 
+    /** Swaps the effect on a clip for another one, keeping its place on the timeline, strength, opacity, colours and lane. */
+    fun replaceEffect(id: String, fxId: String) {
+        val def = EffectLibrary.get(fxId) ?: return
+        val fresh = LayerFactory.create(def)
+        updateEffect(id) { old ->
+            fresh.copy(id = old.id, on = old.on, from = old.from, to = old.to, track = old.track, intensity = old.intensity, opacity = old.opacity,
+                follow = old.follow, c1 = old.c1 ?: fresh.c1, c2 = old.c2 ?: fresh.c2, auto = false)
+        }
+    }
+
     /** Adds an effect clip at the playhead. */
     fun addEffect(fxId: String, lengthS: Float = 6f): String? {
         val def = EffectLibrary.get(fxId) ?: return null

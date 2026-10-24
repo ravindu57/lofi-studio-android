@@ -57,8 +57,14 @@ class Planner(private val g: Graph, private val llm: LocalLlm, private val cloud
     suspend fun make(minutesOverride: Int? = null, seed: Long? = null): Plan {
         val rng = if (seed != null) Random(seed) else Random.Default
         val s = g.settings.value
-        val tracks = g.db.tracks().usable()
+        var tracks = g.db.tracks().usable()
         if (tracks.isEmpty()) throw PlanException("There's no music yet.", "Open Library and add a music folder.")
+        // song pools: only songs from the enabled pools are used
+        val pools = s.songPools.filter { it.enabled }
+        if (pools.isNotEmpty()) {
+            tracks = tracks.filter { t -> pools.any { Pools.contains(it, t.uri) } }
+            if (tracks.isEmpty()) throw PlanException("The enabled song pools have no songs.", "Open Settings → Automation recipe and check the pool folders, then rescan in Library.")
+        }
         val recent = g.db.jobs().recentNow(20).filter { it.status != "cancelled" }
         val recentMoods = recent.mapNotNull { it.mood.takeIf { m -> m.isNotBlank() } }
         val recentHashes = recent.mapNotNull { runCatching { json.decodeFromString<Plan>(it.planJson).orderHash }.getOrNull() }.toSet()
@@ -68,12 +74,18 @@ class Planner(private val g: Graph, private val llm: LocalLlm, private val cloud
         val mood = moodPool.filter { it != recentMoods.firstOrNull() }.ifEmpty { moodPool }.random(rng)
 
         val seconds = (minutesOverride ?: s.targetMinutes) * 60.0
-        val chosen = pickTracks(tracks, mood, seconds, s.crossfadeS.toDouble(), recentHashes, rng)
+        // skip songs used in the last few videos while enough others remain to fill the length
+        val blocked = recent.take(s.avoidRepeatVideos.coerceIn(0, 10)).flatMap { decode(it.planJson)?.trackIds.orEmpty() }.toSet()
+        val fresh = tracks.filter { it.id !in blocked }
+        val usable = if (blocked.isNotEmpty() && fresh.sumOf { it.durationMs } / 1000.0 >= seconds) fresh else tracks
+        val groups = if (s.poolMode == "SEQUENCE" && pools.size > 1) pools.map { p -> usable.filter { Pools.contains(p, it.uri) } }.filter { it.isNotEmpty() }.takeIf { it.size > 1 } else null
+        val chosen = pickTracks(usable, groups, mood, seconds, s.crossfadeS.toDouble(), recentHashes, rng)
         val totalMin = seconds / 60
 
         val hint = s.ideaHint.trim()
         var text = rulesText(mood, totalMin, rng, hint.takeIf { it.isNotBlank() })
         if (hint.isNotBlank()) g.settings.update { it.copy(ideaHint = "") }
+        val videoNo = g.db.jobs().recentNow(1000).size + 1
         var planner = "rules"
         when (s.planner) {
             "cloud", "claude" -> if (cloud.configured) {
@@ -85,6 +97,7 @@ class Planner(private val g: Graph, private val llm: LocalLlm, private val cloud
             }
         }
         val base = s.defaultPrompt
+        text = applyTemplates(text, s, mood, totalMin, videoNo)
         return Plan(
             title = text.title, description = text.description, tags = text.tags, mood = mood, scene = text.scene,
             durationS = seconds, trackIds = chosen.map { it.id },
@@ -93,18 +106,22 @@ class Planner(private val g: Graph, private val llm: LocalLlm, private val cloud
         )
     }
 
-    private fun pickTracks(tracks: List<TrackEntity>, mood: String, seconds: Double, xf: Double, recent: Set<String>, rng: Random): List<TrackEntity> {
+    /** [groups] (one list per pool) makes song 1 come from pool 1, song 2 from pool 2 and so on, round and round. */
+    private fun pickTracks(tracks: List<TrackEntity>, groups: List<List<TrackEntity>>?, mood: String, seconds: Double, xf: Double, recent: Set<String>, rng: Random): List<TrackEntity> {
         var best: List<TrackEntity> = emptyList()
         repeat(12) {
-            val ranked = tracks.sortedBy { t ->
+            fun rank(list: List<TrackEntity>) = list.sortedBy { t ->
                 (if (mood in t.moods) -1.0 else 0.0) + rng.nextDouble() * 0.9 + minOf(t.usedCount, 20) * 0.03
             }
+            val ranked = rank(tracks)
+            val rankedGroups = groups?.map { rank(it) }
+            fun at(i: Int): TrackEntity = if (rankedGroups != null) rankedGroups[i % rankedGroups.size].let { it[(i / rankedGroups.size) % it.size] } else ranked[i % ranked.size]
             val chosen = ArrayList<TrackEntity>()
             var total = 0.0
             var i = 0
             while (total < seconds) {
-                var n = ranked[i % ranked.size]
-                if (chosen.isNotEmpty() && n.id == chosen.last().id && ranked.size > 1) { i++; n = ranked[i % ranked.size] }
+                var n = at(i)
+                if (chosen.isNotEmpty() && n.id == chosen.last().id && ranked.size > 1) { i++; n = at(i) }
                 chosen.add(n)
                 total += n.durationMs / 1000.0 - (if (chosen.size > 1) xf else 0.0)
                 i++
@@ -117,6 +134,18 @@ class Planner(private val g: Graph, private val llm: LocalLlm, private val cloud
     }
 
     private data class Text(val title: String, val description: String, val tags: List<String>, val scene: String)
+
+    /** Fills {mood} {scene} {length} {date} {n} {channel} in the user's title/description templates. */
+    private fun applyTemplates(t: Text, s: com.lofiautopilot.studio.core.AppSettings, mood: String, minutes: Double, n: Int): Text {
+        if (s.titleTemplate.isBlank() && s.descTemplate.isBlank()) return t
+        fun fill(x: String) = x.replace("{mood}", mood).replace("{scene}", t.scene).replace("{length}", lengthWord(minutes))
+            .replace("{date}", java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date()))
+            .replace("{n}", n.toString()).replace("{channel}", s.channelName)
+        return t.copy(
+            title = s.titleTemplate.takeIf { it.isNotBlank() }?.let { fill(it).trim().take(95) } ?: t.title,
+            description = s.descTemplate.takeIf { it.isNotBlank() }?.let { fill(it) } ?: t.description,
+        )
+    }
 
     private fun lengthWord(minutes: Double): String {
         val h = minutes / 60

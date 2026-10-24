@@ -33,6 +33,8 @@ object AudioAnalysis {
         onProgress: (Float) -> Unit = {},
         cancelled: () -> Boolean = { false },
     ): AnalysisResult {
+        // Whole-mix analyses are remembered on disk; partial ones (maxSeconds) are not.
+        if (maxSeconds == null) AnalysisCache.load(context, clips, normalize)?.let { onProgress(1f); return it }
         val meters = HashMap<String, LoudnessMeter>()
         val need = clips.filter { it.lufs == null }.map { it.id }.toSet()
         val src = TimelineMix(context, clips, normalize, 0.0, maxSeconds ?: Double.MAX_VALUE)
@@ -62,7 +64,9 @@ object AudioAnalysis {
         ft.marks = clips.sortedBy { it.startS }.map { TrackMark(it.startS, it.title) }
         val lufs = clips.associate { it.id to (if (it.id in need) meters[it.id]?.lufs() else it.lufs) }
         onProgress(1f)
-        return AnalysisResult(ft, lufs, done)
+        val result = AnalysisResult(ft, lufs, done)
+        if (maxSeconds == null) AnalysisCache.save(context, clips, normalize, result)
+        return result
     }
 
     /** Measures loudness of a track from a short excerpt (used when importing music; cheap). */

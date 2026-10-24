@@ -124,7 +124,7 @@ internal fun Sheets(
     val visible = remember { androidx.compose.animation.core.MutableTransitionState(false).apply { targetState = true } }
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
         val maxH = maxHeight
-        val rest = (if (sheet in listOf(SheetKind.EQ, SheetKind.ADJUST, SheetKind.EFFECTS, SheetKind.LOOKS, SheetKind.AI, SheetKind.MEDIA, SheetKind.TRANSITION)) 300.dp else 214.dp).coerceAtMost(maxH - 40.dp)
+        val rest = (if (sheet in listOf(SheetKind.EQ, SheetKind.ADJUST, SheetKind.EFFECTS, SheetKind.REPLACE_FX, SheetKind.EXPORT, SheetKind.LOOKS, SheetKind.AI, SheetKind.MEDIA, SheetKind.TRANSITION)) 300.dp else 214.dp).coerceAtMost(maxH - 40.dp)
         var panelH by remember(sheet) { mutableStateOf(rest) }
         val animatedH by androidx.compose.animation.core.animateDpAsState(panelH, androidx.compose.animation.core.tween(if (panelH == rest || panelH == maxH) 200 else 0), label = "panel")
         val isFull = panelH >= maxH - 1.dp
@@ -169,6 +169,7 @@ internal fun Sheets(
                         SheetKind.TRANSITION -> TransitionSheet(model)
                         SheetKind.MUSIC -> MusicSheet(g, model, onPickAudio) { setSheet(SheetKind.NONE) }
                         SheetKind.EFFECTS -> EffectsSheet { def -> model.addEffect(def.id); setSheet(SheetKind.NONE) }
+                        SheetKind.REPLACE_FX -> EffectsSheet("Replace with…") { def -> (model.selection as? Sel.Effect)?.let { model.replaceEffect(it.id, def.id) }; setSheet(SheetKind.NONE) }
                         SheetKind.LOOKS -> LooksSheet(g, model) { setSheet(SheetKind.NONE) }
                         SheetKind.ADJUST -> AdjustSheet(model)
                         SheetKind.VOLUME -> VolumeSheet(model)
@@ -309,13 +310,13 @@ private fun MusicSheet(g: Graph, model: EditorModel, onFiles: () -> Unit, close:
 }
 
 @Composable
-private fun EffectsSheet(onPick: (FxDef) -> Unit) {
+private fun EffectsSheet(title: String = "Effects", onPick: (FxDef) -> Unit) {
     val c = Lofi.c
     var q by remember { mutableStateOf("") }
     var cat by remember { mutableStateOf("All") }
     val list = EffectLibrary.search(q).filter { cat == "All" || it.category == cat }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Effects", color = c.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+        Text(title, color = c.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
         OutlinedTextField(q, { q = it }, Modifier.weight(1f), singleLine = true, placeholder = { Text("Search ${EffectLibrary.all.size} effects", fontSize = 13.sp) }, textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp), shape = RoundedCornerShape(8.dp))
     }
     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 6.dp)) {
@@ -344,7 +345,7 @@ private fun LooksSheet(g: Graph, model: EditorModel, close: () -> Unit) {
     val scope = rememberCoroutineScope()
     var name by remember { mutableStateOf("") }
     val json = remember { kotlinx.serialization.json.Json { ignoreUnknownKeys = true; encodeDefaults = true } }
-    SheetTitle("Looks", "A look is a ready-made stack of effects covering the whole video. Adding one keeps your own clips.")
+    SheetTitle("Looks (effect presets)", "A look is a ready-made stack of effects covering the whole video. Save yours here, then pick it in Settings → Automation recipe so automatic videos use it.")
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(name, { name = it }, Modifier.weight(1f), singleLine = true, placeholder = { Text("Save current effects as…", fontSize = 13.sp) }, shape = RoundedCornerShape(8.dp))
         GhostButton("Save", enabled = name.isNotBlank() && model.project.effects.isNotEmpty()) {
@@ -457,19 +458,25 @@ private fun VolumeSheet(model: EditorModel) {
 
 @Composable
 private fun FormatSheet(model: EditorModel) {
-    val p = model.project
     Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         SheetTitle("Format")
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) { items(Aspect.entries) { a -> Chip(a.label, p.aspect == a.name, { model.edit { it.copy(aspect = a.name) } }) } }
-        Text("Quality", color = Lofi.c.muted, fontSize = 12.sp)
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(360, 720, 1080, 1440).forEach { q -> Chip("${q}p", p.quality == q, { model.edit { it.copy(quality = q) } }) } }
-        Text("Frame rate", color = Lofi.c.muted, fontSize = 12.sp)
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(24, 30, 60).forEach { f -> Chip("$f", p.fps == f, { model.edit { it.copy(fps = f) } }) } }
-        Text("Codec", color = Lofi.c.muted, fontSize = 12.sp)
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) { items(Codec.entries) { k -> Chip(k.label, p.codec == k.name, { model.edit { it.copy(codec = k.name) } }) } }
-        Text("Picture fit", color = Lofi.c.muted, fontSize = 12.sp)
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { Fit.entries.forEach { f -> Chip(f.label, p.fit == f, { model.edit { it.copy(fit = f) } }) } }
+        FormatOptions(model)
     }
+}
+
+/** Shape, quality, frame rate, codec and picture fit. Shown in the Format tool and again in the Export sheet. */
+@Composable
+private fun FormatOptions(model: EditorModel) {
+    val p = model.project
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) { items(Aspect.entries) { a -> Chip(a.label, p.aspect == a.name, { model.edit { it.copy(aspect = a.name) } }) } }
+    Text("Quality (a phone that can't encode it drops to the next size down)", color = Lofi.c.muted, fontSize = 12.sp)
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) { items(listOf(360, 480, 720, 1080, 1440, 2160)) { q -> Chip(if (q == 2160) "4K" else "${q}p", p.quality == q, { model.edit { it.copy(quality = q) } }) } }
+    Text("Frame rate", color = Lofi.c.muted, fontSize = 12.sp)
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(24, 30, 60).forEach { f -> Chip("$f", p.fps == f, { model.edit { it.copy(fps = f) } }) } }
+    Text("Codec", color = Lofi.c.muted, fontSize = 12.sp)
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) { items(Codec.entries) { k -> Chip(k.label, p.codec == k.name, { model.edit { it.copy(codec = k.name) } }) } }
+    Text("Picture fit", color = Lofi.c.muted, fontSize = 12.sp)
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { Fit.entries.forEach { f -> Chip(f.label, p.fit == f, { model.edit { it.copy(fit = f) } }) } }
 }
 
 @Composable
@@ -554,6 +561,7 @@ private fun ExportSheet(g: Graph, model: EditorModel, onDone: () -> Unit) {
     Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         SheetTitle("Export video", "Rendering happens in the background with a progress notification. You can close the app.")
         Mono("${w}×$h  ·  ${p.fps} fps  ·  %d:%02d  ·  about %.0f MB".format(p.durationS.toInt() / 60, p.durationS.toInt() % 60, mb), c.ink, 13)
+        FormatOptions(model)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) { Text("AI rhythm director", color = c.ink, fontSize = 13.sp); Text("Effects swell with loud parts and calm down in quiet ones", color = c.faint, fontSize = 11.sp) }
             Switch(p.director, { v -> model.edit { it.copy(director = v) } })

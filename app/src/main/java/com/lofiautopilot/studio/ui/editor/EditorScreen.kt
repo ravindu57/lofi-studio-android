@@ -105,7 +105,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-internal enum class SheetKind { NONE, EFFECTS, MUSIC, LOOKS, ADJUST, VOLUME, FADE, EQ, FORMAT, EXPORT, AI, MEDIA, TRANSITION }
+internal enum class SheetKind { NONE, EFFECTS, REPLACE_FX, MUSIC, LOOKS, ADJUST, VOLUME, FADE, EQ, FORMAT, EXPORT, AI, MEDIA, TRANSITION }
 
 /**
  * The full-screen editor. It forces landscape, hides the system bars, and shows only the tools that apply to what is
@@ -255,6 +255,7 @@ fun EditorScreen(g: Graph, model: EditorModel, onClose: () -> Unit) {
                             2 -> {
                                 tool(Icons.Rounded.Tune, "Adjust") { sheet = SheetKind.ADJUST }
                                 tool(Icons.Rounded.ContentCut, "Split") { model.split(sel!!) }
+                                tool(Icons.Rounded.SwapHoriz, "Replace") { sheet = SheetKind.REPLACE_FX }
                                 tool(Icons.Rounded.GraphicEq, "On beat") {
                                     val id = (sel as Sel.Effect).id
                                     model.effectById(id)?.let { l -> model.nearestBeat(l.from)?.let { b -> model.updateEffect(id) { it.copy(from = b, to = b + (model.project.layerEnd(l) - l.from)) } } }

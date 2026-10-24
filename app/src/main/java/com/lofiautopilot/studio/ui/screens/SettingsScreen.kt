@@ -83,6 +83,7 @@ fun SettingsScreen(g: Graph, onClose: () -> Unit) {
             OutlinedTextField(s.channelName, { v -> g.settings.update { it.copy(channelName = v) } }, Modifier.fillMaxWidth(), label = { Text("Channel name") }, singleLine = true)
         }
         AutopilotCard(g)
+        RecipeCard(g)
         VideoCard(g)
         AiCard(g)
         AccountsCard(g)
@@ -93,7 +94,7 @@ fun SettingsScreen(g: Graph, onClose: () -> Unit) {
 }
 
 @Composable
-private fun Card(title: String, index: Int, content: @Composable ColumnScope.() -> Unit) {
+internal fun Card(title: String, index: Int, content: @Composable ColumnScope.() -> Unit) {
     val c = Lofi.c
     GlassCard(Modifier.fillMaxWidth().staggerIn(index)) {
         Column(Modifier.padding(16.dp).animateContentSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -104,7 +105,7 @@ private fun Card(title: String, index: Int, content: @Composable ColumnScope.() 
 }
 
 @Composable
-private fun ToggleRow(label: String, hint: String = "", checked: Boolean, onChange: (Boolean) -> Unit) {
+internal fun ToggleRow(label: String, hint: String = "", checked: Boolean, onChange: (Boolean) -> Unit) {
     val c = Lofi.c
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) { Text(label, color = c.ink, fontSize = 15.sp); if (hint.isNotBlank()) Text(hint, color = c.faint, fontSize = 12.sp) }
@@ -113,7 +114,7 @@ private fun ToggleRow(label: String, hint: String = "", checked: Boolean, onChan
 }
 
 @Composable
-private fun <T> ChipRow(label: String, options: List<Pair<String, T>>, selected: T, onSelect: (T) -> Unit) {
+internal fun <T> ChipRow(label: String, options: List<Pair<String, T>>, selected: T, onSelect: (T) -> Unit) {
     val c = Lofi.c
     Text(label, color = c.muted, fontSize = 13.sp)
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { items(options) { (t, v) -> Chip(t, v == selected, { onSelect(v) }) } }

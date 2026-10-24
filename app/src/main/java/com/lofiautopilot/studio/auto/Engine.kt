@@ -271,6 +271,42 @@ class Engine(private val ctx: Context, private val g: Graph) {
         upd(j.id) { it.copy(imageUri = Uri.fromFile(choice.file).toString(), stage = Stage.RENDER, progress = 0.05f) }
     }
 
+    /** The effect preset for an automatic video: the single chosen look, or one from the pool (random or in turn). */
+    private suspend fun chooseLook(s: com.lofiautopilot.studio.core.AppSettings, jobId: Long): String {
+        val pool = s.lookPool.filter { it == "Auto" || Presets.builtin.any { p -> p.name == it } || g.db.looks().byName(it) != null }
+        if (s.lookMode == "SINGLE" || pool.isEmpty()) return s.lookName
+        val pick = if (s.lookMode == "RANDOM") pool.random() else {
+            val i = (g.db.kv().get("look_rotation")?.toIntOrNull() ?: 0)
+            g.db.kv().put(com.lofiautopilot.studio.data.KvEntity("look_rotation", (i + 1).toString()))
+            pool[i % pool.size]
+        }
+        g.log("Effect preset for this video: $pick", jobId)
+        return pick
+    }
+
+    /** What the next automatic video would use, in plain words (Settings → Automation recipe → Preview). */
+    suspend fun recipePreview(): String {
+        val s = g.settings.value
+        val lines = ArrayList<String>()
+        val images = g.db.images()
+        val all = images.candidates()
+        val pick = if (s.pictureRule == "NEWEST") art.newest(all, s.newestBy) else (art.newest(images.newOnes(), s.newestBy) ?: all.firstOrNull())
+        lines.add(if (s.imageFolderUri.isBlank()) "Thumbnail: no folder chosen." else "Thumbnail: " + (pick?.name ?: "no pictures found yet"))
+        if (s.introFolderUri.isBlank()) lines.add("Intros: " + (if (s.introId.isBlank()) "none" else "built-in (${s.introId})"))
+        else {
+            val intros = library.introClips()
+            lines.add("Intros: " + if (intros.isEmpty()) "no video files found in the intro folder" else intros.mapIndexed { i, c -> "${i + 1}. ${c.title} (${c.lenS.toInt()}s)" }.joinToString("  "))
+        }
+        val tracks = g.db.tracks().usable()
+        val pools = s.songPools.filter { it.enabled }
+        if (pools.isEmpty()) lines.add("Songs: all ${tracks.size} songs in your music folders.")
+        else lines.add("Songs (${if (s.poolMode == "SEQUENCE") "one after another from each pool" else "mixed at random"}): " +
+            pools.joinToString("  ") { p -> "${p.name} ${tracks.count { Pools.contains(p, it.uri) }}" })
+        lines.add("Effects: " + if (s.lookMode == "SINGLE" || s.lookPool.isEmpty()) s.lookName else "${s.lookMode.lowercase()} of ${s.lookPool.joinToString()}")
+        lines.add("Length: ${s.targetMinutes} min · ${s.videosPerDay}/day from ${s.publishTime} · " + if (s.publishEnabled) "uploads automatically" else "saves only (publishing is off)")
+        return lines.joinToString("\n")
+    }
+
     private suspend fun savedLook(name: String): Look? = g.db.looks().byName(name)?.let { runCatching { json.decodeFromString<Look>(it.json) }.getOrNull() }
 
     /** Builds the timeline for an automatic video: the chosen tracks back to back with crossfades, over the chosen picture. */
@@ -302,8 +338,9 @@ class Engine(private val ctx: Context, private val g: Graph) {
     }
 
     private suspend fun doRender(j: JobEntity) {
-        val s = g.settings.value
         val spec = spec(j)
+        val automatic = j.source != "studio" && spec.project == null
+        val s = g.settings.value.let { st -> if (automatic) st.copy(lookName = chooseLook(st, j.id)) else st }
         val plan = planner.decode(j.planJson)
         var project: Project = (spec.project ?: run {
             if (plan == null) throw JobFailure("The plan was lost.", "Retry the video.", retry = false)
@@ -341,13 +378,14 @@ class Engine(private val ctx: Context, private val g: Graph) {
         var effects = project.effects
         var plan2 = Director.rules(summary, rainyHint = plan?.mood == "rain")
         // automatic videos: several pictures and an intro, cut to the music with transitions
-        if (j.source != "studio" && spec.project == null && (s.slideshowPics > 1 || s.introId.isNotBlank())) {
+        val introClips = if (automatic) runCatching { library.introClips() }.getOrDefault(emptyList()) else emptyList()
+        if (automatic && (s.slideshowPics > 1 || s.introId.isNotBlank() || introClips.isNotEmpty())) {
             val used = project.media.map { it.uri }.toSet()
             val more = if (s.slideshowPics > 1) g.db.images().candidates().map { it.uri }.filter { it !in used }.shuffled().take(s.slideshowPics - 1) else emptyList()
             val intro = s.introId.takeIf { it.isNotBlank() }?.let { if (it == "auto") com.lofiautopilot.studio.vfx.Intros.all.random().id else it }
-            val cut = com.lofiautopilot.studio.ai.AutoTimeline.autoCut(project, summary, analysis.features, more, intro, s.channelName)
+            val cut = com.lofiautopilot.studio.ai.AutoTimeline.autoCut(project, summary, analysis.features, more, intro, s.channelName, introClips)
             project = project.copy(media = cut)
-            g.log("Cut ${cut.count { !it.isIntro }} picture clip(s)${if (intro != null) " + intro" else ""} to the music with transitions.", j.id)
+            g.log("Cut ${cut.count { !it.isIntro && it.uri !in introClips.map { c -> c.uri } }} picture clip(s)${if (introClips.isNotEmpty()) " after intro(s): " + introClips.joinToString { it.title } else if (intro != null) " + intro" else ""} to the music with transitions.", j.id)
         }
         if (project.director) {
             upd(j.id) { it.copy(phase = "Arranging effects to the rhythm", progress = 0.2f) }

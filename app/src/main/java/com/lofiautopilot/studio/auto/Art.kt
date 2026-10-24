@@ -65,7 +65,7 @@ class Art(private val ctx: Context, private val g: Graph) {
             g.log("Reference mode needs an OpenAI key; using your newest picture directly.", jobId, "warn")
         }
 
-        val pick = fresh.firstOrNull() ?: all.firstOrNull()
+        val pick = if (s.pictureRule == "NEWEST") newest(all, s.newestBy) else (newest(fresh, s.newestBy) ?: all.firstOrNull())
         if (pick == null) {
             if (openAiKey.isNotBlank()) {
                 val bytes = try { generate(openAiKey, prompt, emptyList()) } catch (e: java.io.IOException) { throw ArtException("Couldn't reach the image service.", "Check the internet connection.") }
@@ -80,6 +80,13 @@ class Art(private val ctx: Context, private val g: Graph) {
         FileOutputStream(out).use { bmp.compress(Bitmap.CompressFormat.JPEG, 94, it) }
         bmp.recycle()
         return ArtChoice(out, listOf(pick), if (pick.state == "new") "Using the new picture “${pick.name}”." else "No new pictures, reusing “${pick.name}”.")
+    }
+
+    /** The newest picture by the user's rule: file date, highest number/name, or last to appear in the folder. */
+    fun newest(list: List<ImageEntity>, by: String): ImageEntity? = when (by) {
+        "NAME" -> list.maxWithOrNull { a, b -> Pools.naturalCompare(a.name, b.name) }
+        "ADDED" -> list.maxWithOrNull(compareBy<ImageEntity>({ it.firstSeen }, { it.id }))
+        else -> list.maxWithOrNull(compareBy<ImageEntity>({ it.modified }, { it.firstSeen }))
     }
 
     suspend fun markUsed(list: List<ImageEntity>) {

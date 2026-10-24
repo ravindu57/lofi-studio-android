@@ -10,6 +10,10 @@ import kotlinx.serialization.json.Json
 const val DEFAULT_PROMPT = "Cozy anime-style illustration, a lone figure at a desk by a window at night, " +
     "soft rain on the glass, warm desk lamp glow, muted dusk palette, 16:9, no text."
 
+/** A named folder of songs. Videos draw from the enabled pools. */
+@Serializable
+data class SongPool(val name: String, val folderUri: String, val enabled: Boolean = true)
+
 @Serializable
 data class AppSettings(
     val channelName: String = "My lofi channel",
@@ -36,6 +40,21 @@ data class AppSettings(
     /** Intro clip id placed at the start of automatic videos ("" = none, "auto" = pick one). */
     val introId: String = "",
     val keepDays: Int = 14,
+
+    // automation recipe
+    /** Folder of your own intro videos. They are placed first, in order. Empty = use the built-in intro above. */
+    val introFolderUri: String = "",
+    val introCount: Int = 2,
+    val introOrder: String = "NAME",            // NAME (intro 1, then intro 2...) | RANDOM
+    val songPools: List<SongPool> = emptyList(),
+    val poolMode: String = "MIX",               // MIX = random songs from all enabled pools | SEQUENCE = song 1 from pool 1, song 2 from pool 2...
+    val pictureRule: String = "NEWEST_UNUSED",  // NEWEST_UNUSED (else rotate) | NEWEST (always the newest)
+    val newestBy: String = "MODIFIED",          // MODIFIED (file date) | NAME (highest number/name) | ADDED (last to appear in the folder)
+    val lookMode: String = "SINGLE",            // SINGLE = the look above | RANDOM | ROTATE through lookPool
+    val lookPool: List<String> = emptyList(),
+    val avoidRepeatVideos: Int = 3,             // songs used in the last N videos are skipped while enough others remain
+    val titleTemplate: String = "",             // tokens: {mood} {scene} {length} {date} {n} {channel}; empty = written by the planner
+    val descTemplate: String = "",
 
     // pictures
     val imageFolderUri: String = "",

@@ -189,7 +189,16 @@ fun TimelineView(model: EditorModel, expanded: Boolean, modifier: Modifier = Mod
                 // one-finger horizontal scroll: quick swipes travel further than slow ones, and flings coast a long way
                 .pointerInput(Unit) {
                     /** 1 when zoomed far out (boost the swipe), 0 from about 38 dp per second upward (finger and content move together). */
-                    fun zoomEase() = (1f - (model.dpPerSec - 8f) / 30f).coerceIn(0f, 1f)
+                    fun zoomEase() = (1f - (model.dpPerSec - 8f) / 22f).coerceIn(0f, 1f)
+                    /** How far the timeline moves per unit of finger travel: a bit under 1 at normal zoom, down to a quarter when zoomed far in, so effects can be placed precisely. */
+                    fun scrollScale(): Float {
+                        val z = model.dpPerSec
+                        return when {
+                            z < 8f -> 1f
+                            z < 30f -> 1f - (z - 8f) / 22f * 0.2f
+                            else -> 0.8f - ((z - 30f) / 270f).coerceIn(0f, 1f) * 0.55f
+                        }
+                    }
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
                         flingJob?.cancel()
@@ -205,7 +214,7 @@ fun TimelineView(model: EditorModel, expanded: Boolean, modifier: Modifier = Mod
                                 val dt = (change.uptimeMillis - lastT).coerceAtLeast(1L)
                                 lastT = change.uptimeMillis
                                 val speed = abs(dx) / dt * 1000f / dens            // dp per second
-                                val gain = 1f + (speed / 700f).coerceIn(0f, 1f) * 1.2f * zoomEase()  // 1x for careful drags; quick swipes up to about 2x when zoomed far out, fading to 1x by normal zoom and beyond
+                                val gain = scrollScale() * (1f + (speed / 700f).coerceIn(0f, 1f) * 1.2f * zoomEase())  // 1x for careful drags; quick swipes up to about 2x when zoomed far out, fading to 1x by normal zoom and beyond
                                 model.posS = (model.posS - dx * gain / pps).coerceIn(0f, model.duration)
                                 tracker.addPosition(change.uptimeMillis, change.position)
                                 change.consume()
@@ -213,7 +222,7 @@ fun TimelineView(model: EditorModel, expanded: Boolean, modifier: Modifier = Mod
                             val v = tracker.calculateVelocity().x
                             if (abs(v) > 250f) flingJob = flingScope.launch {
                                 var last = 0f
-                                AnimationState(0f, -v * (1.0f + 0.6f * zoomEase()) / pps).animateDecay(exponentialDecay<Float>(0.7f)) {
+                                AnimationState(0f, -v * scrollScale() * (1.0f + 0.6f * zoomEase()) / pps).animateDecay(exponentialDecay<Float>(0.7f)) {
                                     model.posS = (model.posS + (value - last)).coerceIn(0f, model.duration)
                                     last = value
                                     if (model.posS <= 0f || model.posS >= model.duration) flingJob?.cancel()

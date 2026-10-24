@@ -13,6 +13,7 @@ import com.lofiautopilot.studio.data.TrackEntity
 class Library(private val ctx: Context, private val g: Graph) {
     private val audioExt = setOf("mp3", "wav", "m4a", "aac", "flac", "ogg", "opus")
     private val imageExt = setOf("jpg", "jpeg", "png", "webp", "heic")
+    private val videoExt = setOf("mp4", "mov", "m4v", "webm", "mkv", "3gp")
 
     private val moodWords = mapOf(
         "rain" to listOf("rain", "storm", "drizzle", "wet"),
@@ -41,13 +42,21 @@ class Library(private val ctx: Context, private val g: Graph) {
         val dao = g.db.tracks()
         val seen = ArrayList<String>()
         var added = 0
-        for (u in g.settings.value.musicFolderUris) {
+        // The same song can be reached through a music folder and through a pool folder inside it: count it once.
+        val byDoc = HashMap<String, String>()
+        dao.allNow().forEach { t -> Pools.docId(t.uri)?.let { byDoc.putIfAbsent(it, t.uri) } }
+        val s = g.settings.value
+        for (u in (s.musicFolderUris + s.songPools.map { it.folderUri }).filter { it.isNotBlank() }.distinct()) {
             val tree = Uri.parse(u)
             for (f in Saf.walk(ctx, tree)) {
                 val ext = f.name.substringAfterLast('.', "").lowercase()
                 if (ext !in audioExt && !f.mime.startsWith("audio/")) continue
                 val key = f.uri.toString()
+                val doc = Pools.docId(key)
+                val known = doc?.let { byDoc[it] }
+                if (known != null && known != key) { seen.add(known); continue }
                 seen.add(key)
+                if (doc != null) byDoc[doc] = key
                 if (dao.byUri(key) != null) continue
                 val dur = PcmDecoder.probe(ctx, f.uri)
                 val title = nice(f.name)
@@ -68,6 +77,18 @@ class Library(private val ctx: Context, private val g: Graph) {
             onEach(i, todo.size)
             val l = AudioAnalysis.quickLufs(ctx, Uri.parse(t.uri))
             if (l != null) dao.update(t.copy(lufs = l))
+        }
+    }
+
+    /** The user's intro videos in the order they should play (intro 1, then intro 2...), ready to drop on the timeline. */
+    suspend fun introClips(): List<com.lofiautopilot.studio.vfx.MediaClip> {
+        val s = g.settings.value
+        if (s.introFolderUri.isBlank()) return emptyList()
+        val files = Saf.walk(ctx, Uri.parse(s.introFolderUri), depth = 0).filter { it.mime.startsWith("video/") || it.name.substringAfterLast('.', "").lowercase() in videoExt }
+        val ordered = if (s.introOrder == "RANDOM") files.shuffled() else files.sortedWith { a, b -> Pools.naturalCompare(a.name, b.name) }
+        return ordered.take(s.introCount.coerceIn(1, 5)).mapNotNull { f ->
+            val d = runCatching { com.lofiautopilot.studio.audio.PcmDecoder.probe(ctx, f.uri) / 1e6f }.getOrDefault(0f)
+            if (d < 0.5f) null else com.lofiautopilot.studio.vfx.MediaClip(uri = f.uri.toString(), video = true, srcDurS = d, lenS = d, title = f.name.substringBeforeLast('.'))
         }
     }
 

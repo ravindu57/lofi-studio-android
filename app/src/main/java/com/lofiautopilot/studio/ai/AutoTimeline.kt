@@ -246,21 +246,23 @@ object AutoTimeline {
      * each cut gets a transition that fits the energy there. [extra] are more pictures to rotate in. With a single
      * picture there is nothing to cut between, so only the optional intro is added.
      */
-    fun autoCut(project: Project, summary: MusicSummary, ft: FeatureTrack, extra: List<String> = emptyList(), introId: String? = null, title: String = ""): List<MediaClip> {
+    fun autoCut(project: Project, summary: MusicSummary, ft: FeatureTrack, extra: List<String> = emptyList(), introId: String? = null, title: String = "", introClips: List<MediaClip> = emptyList()): List<MediaClip> {
         val dur = max(project.durationS, ft.durationS)
         val existing = project.media.filter { !it.isIntro }
         val srcs = ArrayList<MediaClip>()
         existing.forEach { c -> if (srcs.none { it.uri == c.uri }) srcs.add(c) }
         extra.forEach { u -> if (srcs.none { it.uri == u }) srcs.add(MediaClip(uri = u)) }
-        val intro = introId?.let { introClip(it, title.ifBlank { project.name }) } ?: project.media.firstOrNull { it.isIntro }
+        // The user's own intro videos (in the order given) win over a built-in intro.
+        val intros: List<MediaClip> = if (introClips.isNotEmpty()) introClips.mapIndexed { i, c -> c.copy(transition = if (i == 0) "none" else "dip_black", transS = 0.6f) }
+            else listOfNotNull(introId?.let { introClip(it, title.ifBlank { project.name }) } ?: project.media.firstOrNull { it.isIntro })
         if (srcs.isEmpty() || dur < 1f) return project.media
         val rng = Random(project.id.hashCode().toLong() xor 0x5EED)
         val out = ArrayList<MediaClip>()
-        val introLen = intro?.lenS ?: 0f
+        val introLen = intros.sumOf { it.lenS.toDouble() }.toFloat()
         if (srcs.size == 1) {
             val c = srcs[0]
-            if (intro != null) {
-                out.add(intro.copy(transition = "none"))
+            if (intros.isNotEmpty()) {
+                out.addAll(intros.map { it.copy(id = java.util.UUID.randomUUID().toString().take(8)) })
                 out.add(c.copy(startS = introLen, lenS = max(1f, dur - introLen), transition = "dip_black", transS = 1.0f, id = java.util.UUID.randomUUID().toString().take(8)))
             } else out.add(c.copy(lenS = max(dur, 1f)))
             return out
@@ -293,10 +295,10 @@ object AutoTimeline {
             if (i > 0) last = tid
             out.add(src.copy(id = java.util.UUID.randomUUID().toString().take(8), startS = bounds[i], lenS = bounds[i + 1] - bounds[i], inS = 0f, transition = tid, transS = tlen))
         }
-        if (intro != null) {
+        if (intros.isNotEmpty()) {
             val first = out.first()
             out[0] = first.copy(lenS = max(1f, first.lenS - introLen), transition = "dip_black", transS = 1.0f)
-            out.add(0, intro.copy(transition = "none"))
+            out.addAll(0, intros.map { it.copy(id = java.util.UUID.randomUUID().toString().take(8)) })
         }
         // back to back
         var at = 0f
